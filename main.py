@@ -1,6 +1,8 @@
 import os
 from fastapi import FastAPI, Query
 import requests
+from requests.adapters import HTTPAdapter
+from urllib3.util import Retry
 
 app = FastAPI(title="PNCP Proxy para Google Apps Script")
 
@@ -22,8 +24,14 @@ def get_licitacoes(
         "Accept": "application/json, text/plain, */*"
     }
     
+    # Configura sessão com retentativas automáticas
+    session = requests.Session()
+    retries = Retry(total=2, backoff_factor=1, status_forcelist=[500, 502, 503, 504])
+    session.mount("https://", HTTPAdapter(max_retries=retries))
+    
     try:
-        response = requests.get(url, headers=headers, timeout=15)
+        # Aumentado para 35 segundos para suportar consultas mais pesadas do PNCP
+        response = session.get(url, headers=headers, timeout=35)
         response.raise_for_status()
         return response.json()
     except requests.exceptions.RequestException as e:
