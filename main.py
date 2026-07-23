@@ -14,14 +14,15 @@ def get_licitacoes(
     data_final: str = Query(..., description="Data final YYYYMMDD"),
     pagina: int = Query(1, description="Numero da pagina")
 ):
-    # Consulta ultra-rápida no PNCP sem o filtro textual 'q=' que causa timeout
+    # Endpoint otimizado: Busca Contratações em Aberto para Recebimento de Proposta
+    # Modalidade 6 = Pregão Eletrônico
     url = (
         f"https://pncp.gov.br/api/consulta/v1/contratacoes/publicacao"
         f"?dataInicial={data_inicial}"
         f"&dataFinal={data_final}"
         f"&codigoModalidadeContratacao=6"
         f"&pagina={pagina}"
-        f"&tamanhoPagina=50"
+        f"&tamanhoPagina=20"
     )
 
     headers = {
@@ -31,7 +32,8 @@ def get_licitacoes(
     }
     
     try:
-        response = requests.get(url, headers=headers, timeout=20)
+        # Timeout curto de 10s para não prender o script
+        response = requests.get(url, headers=headers, timeout=10)
         response.raise_for_status()
         return response.json()
     except requests.exceptions.RequestException as e:
