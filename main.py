@@ -14,8 +14,6 @@ def get_licitacoes(
     data_final: str = Query(..., description="Data final YYYYMMDD"),
     pagina: int = Query(1, description="Numero da pagina")
 ):
-    # Endpoint otimizado: Busca Contratações em Aberto para Recebimento de Proposta
-    # Modalidade 6 = Pregão Eletrônico
     url = (
         f"https://pncp.gov.br/api/consulta/v1/contratacoes/publicacao"
         f"?dataInicial={data_inicial}"
@@ -26,14 +24,18 @@ def get_licitacoes(
     )
 
     headers = {
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
-        "Accept": "application/json, text/plain, */*",
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+        "Accept": "application/json",
         "Accept-Language": "pt-BR,pt;q=0.9"
     }
     
     try:
-        # Timeout curto de 10s para não prender o script
-        response = requests.get(url, headers=headers, timeout=10)
+        response = requests.get(url, headers=headers, timeout=12)
+        
+        # Se o PNCP retornar HTML ou erro HTTP, trata graciosamente sem quebrar o JSON
+        if "application/json" not in response.headers.get("Content-Type", ""):
+            return {"error": True, "message": f"PNCP retornou resposta nao-JSON (Status {response.status_code})"}
+
         response.raise_for_status()
         return response.json()
     except requests.exceptions.RequestException as e:
