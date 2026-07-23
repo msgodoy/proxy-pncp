@@ -16,7 +16,6 @@ def get_licitacoes(
     q: str = Query("", description="Termo de busca/filtro"),
     pagina: int = Query(1, description="Numero da pagina")
 ):
-    # Rota do PNCP com busca textual e filtro de modalidade (6 = Pregão Eletrônico)
     url = (
         f"https://pncp.gov.br/api/consulta/v1/contratacoes/publicacao"
         f"?dataInicial={data_inicial}"
@@ -26,7 +25,6 @@ def get_licitacoes(
         f"&tamanhoPagina=50"
     )
     
-    # Se um termo de busca for enviado, inclui na URL do PNCP
     if q and q.strip():
         url += f"&q={requests.utils.quote(q.strip())}"
 
@@ -38,8 +36,8 @@ def get_licitacoes(
     }
     
     try:
-        time.sleep(1.2)
-        response = requests.get(url, headers=headers, timeout=15)
+        time.sleep(1.2) # Pausa de segurança para não tomar Rate Limit 429
+        response = requests.get(url, headers=headers, timeout=25)
         
         if response.status_code == 429:
             return {"error": True, "message": "PNCP Rate Limit (429): Muitas requisicoes simultaneas."}
