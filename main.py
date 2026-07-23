@@ -10,16 +10,18 @@ def home():
 
 @app.get("/pncp/licitacoes")
 def get_licitacoes(
+    q: str = Query(..., description="Termo de busca"),
     data_inicial: str = Query(..., description="Data inicial YYYYMMDD"),
     data_final: str = Query(..., description="Data final YYYYMMDD"),
     pagina: int = Query(1, description="Numero da pagina")
 ):
-    # Endpoint otimizado e indexado do PNCP para contratações abertas
+    # Endpoint oficial de publicações com filtro por termo e Pregão Eletrônico (modalidade 6)
     url = (
-        f"https://pncp.gov.br/api/consulta/v1/contratacoes/proposta"
+        f"https://pncp.gov.br/api/consulta/v1/contratacoes/publicacao"
         f"?dataInicial={data_inicial}"
         f"&dataFinal={data_final}"
         f"&codigoModalidadeContratacao=6"
+        f"&q={requests.utils.quote(q)}"
         f"&pagina={pagina}"
         f"&tamanhoPagina=30"
     )
@@ -31,8 +33,7 @@ def get_licitacoes(
     }
     
     try:
-        # Timeout de 15s direto
-        response = requests.get(url, headers=headers, timeout=15)
+        response = requests.get(url, headers=headers, timeout=20)
         response.raise_for_status()
         return response.json()
     except requests.exceptions.RequestException as e:
