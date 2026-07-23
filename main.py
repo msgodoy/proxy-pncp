@@ -14,7 +14,7 @@ def get_licitacoes(
     data_final: str = Query(..., description="Data final YYYYMMDD"),
     pagina: int = Query(1, description="Numero da pagina")
 ):
-    # Consulta direta por modalidade 6 (Pregão Eletrônico) sem 'q=', ultra-rápida
+    # Consulta robusta de publicações recentes
     url = (
         f"https://pncp.gov.br/api/consulta/v1/contratacoes/publicacao"
         f"?dataInicial={data_inicial}"
@@ -32,10 +32,6 @@ def get_licitacoes(
     
     try:
         response = requests.get(url, headers=headers, timeout=15)
-        
-        if "application/json" not in response.headers.get("Content-Type", ""):
-            return {"error": True, "message": f"PNCP retornou resposta nao-JSON (Status {response.status_code})"}
-
         response.raise_for_status()
         return response.json()
     except requests.exceptions.RequestException as e:
