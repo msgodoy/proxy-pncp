@@ -13,9 +13,10 @@ def home():
 def get_licitacoes(
     data_inicial: str = Query(..., description="Data inicial YYYYMMDD"),
     data_final: str = Query(..., description="Data final YYYYMMDD"),
+    q: str = Query("", description="Termo de busca/filtro"),
     pagina: int = Query(1, description="Numero da pagina")
 ):
-    # Traz 50 editaism por página para ampliar a cobertura sem pesar no servidor
+    # Rota do PNCP com busca textual e filtro de modalidade (6 = Pregão Eletrônico)
     url = (
         f"https://pncp.gov.br/api/consulta/v1/contratacoes/publicacao"
         f"?dataInicial={data_inicial}"
@@ -24,6 +25,10 @@ def get_licitacoes(
         f"&pagina={pagina}"
         f"&tamanhoPagina=50"
     )
+    
+    # Se um termo de busca for enviado, inclui na URL do PNCP
+    if q and q.strip():
+        url += f"&q={requests.utils.quote(q.strip())}"
 
     headers = {
         "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36",
@@ -33,9 +38,7 @@ def get_licitacoes(
     }
     
     try:
-        # Pausa de 1.5s entre chamadas no servidor proxy para respeitar o PNCP
-        time.sleep(1.5)
-        
+        time.sleep(1.2)
         response = requests.get(url, headers=headers, timeout=15)
         
         if response.status_code == 429:
