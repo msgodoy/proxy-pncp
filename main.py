@@ -14,14 +14,14 @@ def get_licitacoes(
     data_final: str = Query(..., description="Data final YYYYMMDD"),
     pagina: int = Query(1, description="Numero da pagina")
 ):
-    # Endpoint otimizado: Filtra direto no PNCP apenas por Pregão Eletrônico (Modalidade 6)
+    # Endpoint otimizado e indexado do PNCP para contratações abertas
     url = (
-        f"https://pncp.gov.br/api/consulta/v1/contratacoes/publicacao"
+        f"https://pncp.gov.br/api/consulta/v1/contratacoes/proposta"
         f"?dataInicial={data_inicial}"
         f"&dataFinal={data_final}"
         f"&codigoModalidadeContratacao=6"
         f"&pagina={pagina}"
-        f"&tamanhoPagina=50"
+        f"&tamanhoPagina=30"
     )
 
     headers = {
@@ -31,7 +31,8 @@ def get_licitacoes(
     }
     
     try:
-        response = requests.get(url, headers=headers, timeout=25)
+        # Timeout de 15s direto
+        response = requests.get(url, headers=headers, timeout=15)
         response.raise_for_status()
         return response.json()
     except requests.exceptions.RequestException as e:
