@@ -15,13 +15,14 @@ def get_licitacoes(
     data_final: str = Query(..., description="Data final YYYYMMDD"),
     pagina: int = Query(1, description="Numero da pagina")
 ):
+    # Traz 50 editaism por página para ampliar a cobertura sem pesar no servidor
     url = (
         f"https://pncp.gov.br/api/consulta/v1/contratacoes/publicacao"
         f"?dataInicial={data_inicial}"
         f"&dataFinal={data_final}"
         f"&codigoModalidadeContratacao=6"
         f"&pagina={pagina}"
-        f"&tamanhoPagina=15"
+        f"&tamanhoPagina=50"
     )
 
     headers = {
@@ -32,13 +33,13 @@ def get_licitacoes(
     }
     
     try:
-        # Pausa de 1.5s no servidor para evitar tomar HTTP 429 do PNCP
+        # Pausa de 1.5s entre chamadas no servidor proxy para respeitar o PNCP
         time.sleep(1.5)
         
-        response = requests.get(url, headers=headers, timeout=12)
+        response = requests.get(url, headers=headers, timeout=15)
         
         if response.status_code == 429:
-            return {"error": True, "message": "PNCP Rate Limit (429): Muitas requisicoes simultaneas. Aguarde alguns instantes."}
+            return {"error": True, "message": "PNCP Rate Limit (429): Muitas requisicoes simultaneas."}
             
         if "application/json" not in response.headers.get("Content-Type", ""):
             return {"error": True, "message": f"PNCP retornou HTML ou bloqueio (Status {response.status_code})"}
