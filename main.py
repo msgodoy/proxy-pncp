@@ -10,20 +10,18 @@ def home():
 
 @app.get("/pncp/licitacoes")
 def get_licitacoes(
-    q: str = Query(..., description="Termo de busca"),
     data_inicial: str = Query(..., description="Data inicial YYYYMMDD"),
     data_final: str = Query(..., description="Data final YYYYMMDD"),
     pagina: int = Query(1, description="Numero da pagina")
 ):
-    # Endpoint oficial de publicações com filtro por termo e Pregão Eletrônico (modalidade 6)
+    # Consulta ultra-rápida no PNCP sem o filtro textual 'q=' que causa timeout
     url = (
         f"https://pncp.gov.br/api/consulta/v1/contratacoes/publicacao"
         f"?dataInicial={data_inicial}"
         f"&dataFinal={data_final}"
         f"&codigoModalidadeContratacao=6"
-        f"&q={requests.utils.quote(q)}"
         f"&pagina={pagina}"
-        f"&tamanhoPagina=30"
+        f"&tamanhoPagina=50"
     )
 
     headers = {
