@@ -14,17 +14,25 @@ def home():
 def get_licitacoes(
     data_inicial: str = Query(None, description="Data inicial YYYYMMDD"),
     data_final: str = Query(None, description="Data final YYYYMMDD"),
-    q: str = Query("", description="Termo de busca/filtro"),
     pagina: int = Query(1, description="Numero da pagina")
 ):
     hoje = datetime.now()
     
-    # Se nao informadas pelo cliente, define as datas obrigatorias exigidas pelo PNCP
+    # Se nao informadas, define a janela padrao exigida pelo PNCP (ultimos 5 dias)
     if not data_inicial:
-        # Janela dos ultimos 10 dias
-        data_inicial = (hoje - timedelta(days=10)).strftime("%Y%m%d")
+        data_inicial = (hoje - timedelta(days=5)).strftime("%Y%m%d")
     if not data_final:
         data_final = hoje.strftime("%Y%m%d")
+
+    # URL 100% compativel com o Manual da API do PNCP (Modalidade 6 = Pregao Eletronico)
+    url = (
+        f"https://pncp.gov.br/api/consulta/v1/contratacoes/publicacao"
+        f"?dataInicial={data_inicial}"
+        f"&dataFinal={data_final}"
+        f"&codigoModalidadeContratacao=6"
+        f"&pagina={pagina}"
+        f"&tamanhoPagina=50"
+    )
 
     headers = {
         "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36",
@@ -33,43 +41,18 @@ def get_licitacoes(
         "Cache-Control": "no-cache"
     }
 
-    # Tentativa 1: Endpoint de Propostas Abertas
-    url_proposta = (
-        f"https://pncp.gov.br/api/consulta/v1/contratacoes/proposta"
-        f"?dataInicial={data_inicial}"
-        f"&dataFinal={data_final}"
-        f"&codigoModalidadeContratacao=6"
-        f"&pagina={pagina}"
-        f"&tamanhoPagina=25"
-    )
-    if q and q.strip():
-        url_proposta += f"&q={requests.utils.quote(q.strip())}"
-
     try:
-        time.sleep(1.0)
-        resp = requests.get(url_proposta, headers=headers, timeout=20)
+        time.sleep(0.8) # Pausa de seguranca contra Rate Limit
+        resp = requests.get(url, headers=headers, timeout=20)
         
-        # Se o endpoint /proposta aceitar e retornar 200, entrega o JSON
-        if resp.status_code == 200 and "application/json" in resp.headers.get("Content-Type", ""):
-            return resp.json()
+        if resp.status_code == 429:
+            return {"error": True, "message": "Rate Limit PNCP (429): Muitas requisicoes."}
+            
+        if "application/json" not in resp.headers.get("Content-Type", ""):
+            return {"error": True, "message": f"Resposta nao-JSON do PNCP (Status {resp.status_code})"}
 
-        # Tentativa 2 (Fallback): Se /proposta retornar 400 ou falhar, consulta /publicacao
-        url_pub = (
-            f"https://pncp.gov.br/api/consulta/v1/contratacoes/publicacao"
-            f"?dataInicial={data_inicial}"
-            f"&dataFinal={data_final}"
-            f"&codigoModalidadeContratacao=6"
-            f"&pagina={pagina}"
-            f"&tamanhoPagina=25"
-        )
-        if q and q.strip():
-            url_pub += f"&q={requests.utils.quote(q.strip())}"
-
-        resp_pub = requests.get(url_pub, headers=headers, timeout=20)
-        if resp_pub.status_code == 200 and "application/json" in resp_pub.headers.get("Content-Type", ""):
-            return resp_pub.json()
-
-        return {"error": True, "message": f"PNCP retornou Status {resp.status_code}"}
+        resp.raise_for_status()
+        return resp.json()
 
     except requests.exceptions.RequestException as e:
         return {"error": True, "message": str(e)}
