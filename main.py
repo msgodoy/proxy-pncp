@@ -10,20 +10,18 @@ def home():
 
 @app.get("/pncp/licitacoes")
 def get_licitacoes(
-    q: str = Query(..., description="Termo de busca"),
     data_inicial: str = Query(..., description="Data inicial YYYYMMDD"),
     data_final: str = Query(..., description="Data final YYYYMMDD"),
     pagina: int = Query(1, description="Numero da pagina")
 ):
-    # Endpoint de consulta com termo focado e tamanho de pagina reduzido (10 itens)
+    # Consulta direta por modalidade 6 (Pregão Eletrônico) sem 'q=', ultra-rápida
     url = (
         f"https://pncp.gov.br/api/consulta/v1/contratacoes/publicacao"
-        f"?q={requests.utils.quote(q)}"
-        f"&dataInicial={data_inicial}"
+        f"?dataInicial={data_inicial}"
         f"&dataFinal={data_final}"
         f"&codigoModalidadeContratacao=6"
         f"&pagina={pagina}"
-        f"&tamanhoPagina=10"
+        f"&tamanhoPagina=50"
     )
 
     headers = {
@@ -33,8 +31,7 @@ def get_licitacoes(
     }
     
     try:
-        # Aumentamos o timeout interno do Python para 25 segundos para aguardar a API do PNCP
-        response = requests.get(url, headers=headers, timeout=25)
+        response = requests.get(url, headers=headers, timeout=15)
         
         if "application/json" not in response.headers.get("Content-Type", ""):
             return {"error": True, "message": f"PNCP retornou resposta nao-JSON (Status {response.status_code})"}
@@ -42,4 +39,4 @@ def get_licitacoes(
         response.raise_for_status()
         return response.json()
     except requests.exceptions.RequestException as e:
-        return {"error": True, "message": f"Erro de conexao com PNCP: {str(e)}"}
+        return {"error": True, "message": str(e)}
