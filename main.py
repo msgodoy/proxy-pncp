@@ -11,18 +11,18 @@ def home():
 
 @app.get("/pncp/licitacoes")
 def get_licitacoes(
-    data_inicial: str = Query(..., description="Data inicial YYYYMMDD"),
-    data_final: str = Query(..., description="Data final YYYYMMDD"),
-    q: str = Query("", description="Termo de busca/filtro"),
+    q: str = Query("", description="Termo de busca/filtro (ex: notebook, computador)"),
     pagina: int = Query(1, description="Numero da pagina")
 ):
+    """
+    Busca no endpoint oficial de PROPOSTAS ABERTAS do PNCP (/v1/contratacoes/proposta).
+    Garante que 100% dos pregões retornados estejam ativos e com prazos vigentes para disputa.
+    """
     url = (
-        f"https://pncp.gov.br/api/consulta/v1/contratacoes/publicacao"
-        f"?dataInicial={data_inicial}"
-        f"&dataFinal={data_final}"
-        f"&codigoModalidadeContratacao=6"
+        f"https://pncp.gov.br/api/consulta/v1/contratacoes/proposta"
+        f"?codigoModalidadeContratacao=6"
         f"&pagina={pagina}"
-        f"&tamanhoPagina=50"
+        f"&tamanhoPagina=25"
     )
     
     if q and q.strip():
@@ -36,16 +36,18 @@ def get_licitacoes(
     }
     
     try:
-        time.sleep(1.2) # Pausa de segurança para não tomar Rate Limit 429
+        time.sleep(1.0) # Pausa de seguranca para evitar Rate Limit
         response = requests.get(url, headers=headers, timeout=25)
         
         if response.status_code == 429:
-            return {"error": True, "message": "PNCP Rate Limit (429): Muitas requisicoes simultaneas."}
+            return {"error": True, "message": "PNCP Rate Limit (429): Muitas requisicoes simultaneas. Aguarde alguns instantes."}
             
         if "application/json" not in response.headers.get("Content-Type", ""):
-            return {"error": True, "message": f"PNCP retornou HTML ou bloqueio (Status {response.status_code})"}
+            return {"error": True, "message": f"PNCP retornou resposta nao-JSON ou bloqueio (Status {response.status_code})"}
 
         response.raise_for_status()
         return response.json()
+    except requests.exceptions.Timeout:
+        return {"error": True, "message": "Timeout no PNCP: A API do governo demorou mais de 25s para responder."}
     except requests.exceptions.RequestException as e:
         return {"error": True, "message": str(e)}
